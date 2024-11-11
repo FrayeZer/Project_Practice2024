@@ -1,8 +1,12 @@
+# ./main.py
 import pygame
 import sys
 import game_constants
+import custom_funcs
 
-import custom_sprites
+import custom_sprites.player_sprite as player_sprite
+import custom_sprites.guns_sprites as guns_sprites
+
 
 class Game:
     def __init__(self):
@@ -22,6 +26,7 @@ class Game:
         # Инициализация ключевых спрайтов или групп спрайтов
         self.__init_fps_display()
         self.__init_player()
+        self.__add_guns_into_the_map()
 
     def __apply_screen_settings(self):
         self.screen_width = game_constants.SCREEN_WIDTH
@@ -36,10 +41,17 @@ class Game:
         self.fps_label = pygame.font.SysFont("Times New Roman", 24)
 
     def __init_player(self):
-        self.player = custom_sprites.Player(
-            self.screen_width, self.screen_height)
-        self.all_sprites.add(self.player, layer=10)
+        self.player = player_sprite.Player(initial_groups=[self.all_sprites,
+                                                           self.map_kit, self.player_kit])
+        self.player.rect.center = (self.screen_width // 2,
+                                   self.screen_height // 2)
         # ...
+
+    def __add_guns_into_the_map(self):
+        self.pistol = guns_sprites.Pistol(initial_groups=[self.all_sprites,
+                                                          self.map_kit])
+        self.pistol.rect.center = (
+            self.screen_width // 2, self.screen_height // 2)
 
     def draw_fps(self):
         fps_text = self.fps_label.render(
@@ -51,6 +63,18 @@ class Game:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
+            elif event.type >= pygame.USEREVENT:
+                event_id = event.type - pygame.USEREVENT
+                # Обработка событий с ограничением по количеству вызовов за `time` секунд
+                if event_id in custom_funcs.get_forbidden_events():
+                    custom_funcs.remove_forbidden_event(event_id)
+
+                # Обработка событий с отложенным вызовом
+                elif event_id in custom_funcs.get_delayed_event():
+                    args = custom_funcs.get_delayed_event[event_id][1]
+                    custom_funcs.get_delayed_event[event_id][0](*args)
+                    custom_funcs.remove_delayed_event(event_id)
 
     def update(self):
         self.all_sprites.update(pygame.key.get_pressed())
