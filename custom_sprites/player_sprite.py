@@ -3,7 +3,7 @@ import pygame
 import game_constants
 import custom_sprites.guns_sprites as guns_sprites
 import custom_funcs
-from custom_funcs import key_pressed
+from custom_funcs import key_pressed, any_key_pressed
 
 
 class Player(pygame.sprite.Sprite):
@@ -31,6 +31,20 @@ class Player(pygame.sprite.Sprite):
         # заполучить предмет в инвентарь, нужно его разблокировать, например, купив.
         self.unlocked_items = [guns_sprites.Pistol]
         self.sprint_event_id = game_constants.CUSTOM_EVENTS_IDS['sprint_event']
+        self.add_stamina_event_id = game_constants.CUSTOM_EVENTS_IDS['add_stamina_event']
+        self._flags = {
+            "can_restore_stamina_by_time": True,
+            "can_shoot": True,
+        }
+
+    def _change_flag(self, flag: str, *bool):
+        if bool:
+            self._flags[flag] = bool
+        else:
+            self._flags[flag] = not self._flags[flag]
+
+    def _get_flag(self, flag_name):
+        return self._flags[flag_name]
 
     def add_to_inventory(self, item):
         pass
@@ -39,7 +53,25 @@ class Player(pygame.sprite.Sprite):
         if self.stamina - value >= 0:
             self.stamina -= value
 
+            if self._get_flag("can_restore_stamina_by_time"):
+                self._change_flag("can_restore_stamina_by_time", False)
+                custom_funcs.delayed_activating(
+                    id=self.add_stamina_event_id, delay=2000, function=self._change_flag, flag="can_restore_stamina_by_time", bool=True)
+
+    def restore_stamina_by_time(self):
+        if self._get_flag("can_restore_stamina_by_time"):
+            custom_funcs.activate_with_temp_forbid(
+                id=self.add_stamina_event_id, delay=125, function=self.add_stamina, value=4)
+
+    def add_stamina(self, value):
+        if self.stamina + value <= 100:
+            self.stamina += value
+
     def update(self, keys_pressed):
+        print(self.stamina)
+        if self.stamina < 100:
+            self.restore_stamina_by_time()
+
         K_P = keys_pressed
 
         # Вычисляем движения по осям X и Y
@@ -59,8 +91,7 @@ class Player(pygame.sprite.Sprite):
             move_x = move_x * 1.5
             move_y = move_y * 1.5
 
-        if key_pressed(K_P, "L_SHIFT") and (key_pressed(K_P, "A") or key_pressed(K_P, "D") or
-                                            key_pressed(K_P, "W") or key_pressed(K_P, "S")):
+        if key_pressed(K_P, "L_SHIFT") and any_key_pressed(K_P, "W", "S", "A", "D"):
             custom_funcs.activate_with_temp_forbid(id=self.sprint_event_id, delay=100,
                                                    function=self.spend_stamina, value=4)
 

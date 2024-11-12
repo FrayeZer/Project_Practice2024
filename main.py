@@ -71,9 +71,9 @@ class Game:
                     custom_funcs.remove_forbidden_event(event_id)
 
                 # Обработка событий с отложенным вызовом
-                elif event_id in custom_funcs.get_delayed_event():
-                    args = custom_funcs.get_delayed_event[event_id][1]
-                    custom_funcs.get_delayed_event[event_id][0](*args)
+                elif event_id in custom_funcs.get_delayed_events():
+                    kwargs = custom_funcs.get_delayed_event(event_id)[1]
+                    custom_funcs.get_delayed_event(event_id)[0](**kwargs)
                     custom_funcs.remove_delayed_event(event_id)
 
     def update(self):

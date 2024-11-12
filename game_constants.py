@@ -13,6 +13,7 @@ CUSTOM_EVENTS_IDS = {
     "event_shoot": 1,
     "event_reload": 2,
     "sprint_event": 3,
+    "add_stamina_event" : 4,
 }
 
 # Словарь для чуть более удобной работы с pygame.key
