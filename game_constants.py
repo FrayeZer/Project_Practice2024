@@ -2,8 +2,8 @@ import pygame
 
 # ./game_constants
 #  Размеры экрана
-SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 800
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 400
 
 # Ограничение фпс
 FPS_LIMIT = 60

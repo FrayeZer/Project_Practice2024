@@ -98,3 +98,22 @@ def key_pressed(keys_pressed: list, *args) -> bool:
 
 def any_key_pressed(keys_pressed: list, *args) -> bool:
     return any(keys_pressed[KEYS_DICT[key]] for key in args)
+
+
+# ======================================================== INTERRUPT ERRORS
+
+def INTERRUPT_ERROR(error_code):
+    if error_code == 1:
+        raise InterruptedError(
+            "Конфликт статусов игрока: Игрок не может быть idle и moving одновременно")
+    elif error_code == 2:
+        raise InterruptedError(
+            "replace_inventory_cell(index, ITEM) принимет только класс (или его дочерние классы) BasicItem в качестве аргумента ITEM"
+        )
+
+# ======================================================== INCLUDING TO GROUPS
+
+
+def add_SELF_to_groups(object, game_groups_dict, including_groups):
+    for group_name in including_groups:
+        game_groups_dict[group_name].add(object)

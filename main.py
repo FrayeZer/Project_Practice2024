@@ -5,7 +5,7 @@ import game_constants
 import custom_funcs
 
 import custom_sprites.player_sprite as player_sprite
-import custom_sprites.guns_sprites as guns_sprites
+import custom_sprites.items_sprites as items_sprites
 
 
 class Game:
@@ -16,12 +16,22 @@ class Game:
 
         # Каждый спрайт должен быть добавлен в эту группу для отрисовки спрайтов
         # в правильном порядке. По умолчанию ставить layer=10 или менять при необходимости
-        # Пример: self.all_sprites.add(self.player, layer=10)
-        self.all_sprites = pygame.sprite.LayeredUpdates()
+        # Пример: self.all_sprites_group.add(self.player, layer=10)
+        self.all_sprites_group = pygame.sprite.LayeredUpdates()
+        self.item_sprites_group = pygame.sprite.LayeredUpdates()
+        self.displaying_objects_group = pygame.sprite.LayeredUpdates()
 
         # Соответствующие спрайты должны быть добавлены в соответствующие группы для обработки коллизий
-        self.player_kit = pygame.sprite.LayeredUpdates()
-        self.map_kit = pygame.sprite.LayeredUpdates()
+        self.player_kit_group = pygame.sprite.LayeredUpdates()
+        self.map_kit_group = pygame.sprite.LayeredUpdates()
+
+        self.game_groups_dict = {
+            "all_sprites_group": self.all_sprites_group,
+            "item_sprites_group": self.item_sprites_group,
+            "player_kit_group": self.player_kit_group,
+            "map_kit_group": self.map_kit_group,
+            "displaying_objects_group": self.displaying_objects_group
+        }
 
         # Инициализация ключевых спрайтов или групп спрайтов
         self.__init_fps_display()
@@ -41,15 +51,21 @@ class Game:
         self.fps_label = pygame.font.SysFont("Times New Roman", 24)
 
     def __init_player(self):
-        self.player = player_sprite.Player(initial_groups=[self.all_sprites,
-                                                           self.map_kit, self.player_kit])
+        self.player = player_sprite.Player(game_groups_dict=self.game_groups_dict,
+                                           initial_groups=["displaying_objects_group",
+                                                           "all_sprites_group",
+                                                           "map_kit_group",
+                                                           "player_kit_group"])
         self.player.rect.center = (self.screen_width // 2,
                                    self.screen_height // 2)
         # ...
 
     def __add_guns_into_the_map(self):
-        self.pistol = guns_sprites.Pistol(initial_groups=[self.all_sprites,
-                                                          self.map_kit])
+        self.pistol = items_sprites.Pistol(game_groups_dict=self.game_groups_dict,
+                                           initial_groups=["displaying_objects_group",
+                                                           "all_sprites_group",
+                                                           "map_kit_group",
+                                                           "item_sprites_group"])
         self.pistol.rect.center = (
             self.screen_width // 2, self.screen_height // 2)
 
@@ -77,11 +93,13 @@ class Game:
                     custom_funcs.remove_delayed_event(event_id)
 
     def update(self):
-        self.all_sprites.update(pygame.key.get_pressed())
+        self.all_sprites_group.update(
+            keys_pressed=pygame.key.get_pressed(),
+            player=self.player)
 
     def render(self):
         self.screen.fill((0, 0, 0))
-        self.all_sprites.draw(self.screen)
+        self.displaying_objects_group.draw(self.screen)
         self.draw_fps()
         pygame.display.flip()
         self.clock.tick(self.fps_limit)
