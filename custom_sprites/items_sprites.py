@@ -266,7 +266,7 @@ class Gun(BasicItem):
                            delay=self.reload_time,
                            function=self.add_shots,
                            count=self.ammo)
-        delayed_activating(id=CUSTOM_EVENTS_IDS["gun_ends_reloading"],
+        delayed_activating(id=CUSTOM_EVENTS_IDS["gun_ends_reloading_event"],
                            delay=self.reload_time,
                            function=self.gun_is_fully_reloaded)
 

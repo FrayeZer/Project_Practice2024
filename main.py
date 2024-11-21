@@ -18,7 +18,7 @@ class Game:
 
         # Каждый спрайт должен быть добавлен в эту группу для отрисовки спрайтов
         # в правильном порядке. По умолчанию ставить layer=10 или менять при необходимости
-        # Пример: self.all_sprites_group.add(self.player, layer=10)
+        # Пример: self.displaying_objects_group.add(self.player, layer=10)
         self.all_sprites_group = pygame.sprite.Group()
         self.item_sprites_group = pygame.sprite.Group()
         self.displaying_objects_group = pygame.sprite.LayeredUpdates()

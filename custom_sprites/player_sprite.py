@@ -51,6 +51,8 @@ class Player(pygame.sprite.Sprite):
         self.unlocked_items = [items_sprites.Pistol]
         self.sprint_event_id = game_constants.CUSTOM_EVENTS_IDS['sprint_event']
         self.add_stamina_event_id = game_constants.CUSTOM_EVENTS_IDS['add_stamina_event']
+        self.restore_stamina_by_time_event_id = game_constants.CUSTOM_EVENTS_IDS[
+            "restore_stamina_by_time_event"]
         self._flags = {
             "can_restore_stamina_by_time": True,
             "can_shoot": True,
@@ -67,18 +69,14 @@ class Player(pygame.sprite.Sprite):
             "Upgrader": False,
         }
 
-        # self.TEST_VALUE = 0
+        self.TEST_VALUE = 0
 
 # =============================================================== FLAGS
 
-    def _change_flag(self, flag: str, *bool_value):
+    def _change_flag(self, flag: str, bool_value):
         '''Меняет флаг в словаре _flags.
-           Если передан аргумент bool_value, устанавливает флаг в указанное значение, иначе инвертирует текущий флаг.'''
-        if bool_value:
-            value = bool_value[0]
-            self._flags[flag] = value
-        else:
-            self._flags[flag] = not self._flags[flag]
+           Устанавливает флаг в указанное значение'''
+        self._flags[flag] = bool_value
 
     def _get_flag(self, flag_name):
         '''Возвращает текущее значение флага по имени из словаря _flags.'''
@@ -138,26 +136,28 @@ class Player(pygame.sprite.Sprite):
 
 # =============================================================== STAMINA
 
+
     def spend_stamina(self, value):
         '''Потратить стамину игрока. 
-           Если достаточно стамины, уменьшает значение и запускает восстановление стамины через 2000 мс.'''
+           Если достаточно стамины, уменьшает значение.
+           Запускает восстановление стамины через 2000 мс.'''
+        custom_funcs.delayed_activating(
+            id=self.add_stamina_event_id,
+            delay=2000,
+            function=self._change_flag,
+            flag="can_restore_stamina_by_time",
+            bool_value=True)
+
         if self.stamina - value >= 0:
             self.stamina -= value
-
             if self._get_flag("can_restore_stamina_by_time"):
                 self._change_flag("can_restore_stamina_by_time", False)
-                custom_funcs.delayed_activating(
-                    id=self.add_stamina_event_id,
-                    delay=2000,
-                    function=self._change_flag,
-                    flag="can_restore_stamina_by_time",
-                    bool=True)
 
     def restore_stamina_by_time(self):
         '''Функция для восстановления стамины игрока со временем.'''
         if self._get_flag("can_restore_stamina_by_time"):
             custom_funcs.activate_with_temp_forbid(
-                id=self.add_stamina_event_id,
+                id=self.restore_stamina_by_time_event_id,
                 delay=125,
                 function=self.add_stamina,
                 value=4)
@@ -166,9 +166,11 @@ class Player(pygame.sprite.Sprite):
         '''Добавляет стамину, не превышая максимального значения 100.'''
         self.stamina = min(100, self.stamina + value)
 
+    def get_stamina(self):
+        return self.stamina
+
 
 # =============================================================== ITEMS & INVENTORY
-
 
     def take_item(self):
         '''Подобрать предмет, если он находится в группе item_sprites_group и еще не в экипировке игрока.'''
@@ -236,7 +238,6 @@ class Player(pygame.sprite.Sprite):
 
 # =============================================================== MENUS
 
-
     def open_upgrader(self):
         interactive_collisions = pygame.sprite.spritecollide(
             self, self.game_groups_dict["interactive_objects_group"], dokill=0)
@@ -250,7 +251,7 @@ class Player(pygame.sprite.Sprite):
 
     def update_stamina(self):
         '''Обновляет состояние стамины игрока, восстанавливая её со временем, если это необходимо.'''
-        if self.stamina < 100:
+        if self.get_stamina() < 100:
             self.restore_stamina_by_time()
 
     def update_hp(self):
@@ -280,12 +281,13 @@ class Player(pygame.sprite.Sprite):
             self.open_upgrader()
 
         if key_pressed(K_P, "L_SHIFT") and any_key_pressed(K_P, "W", "A", "S", "D"):
-            self._set_player_status("sprint", True)
-            custom_funcs.activate_with_temp_forbid(
-                id=self.sprint_event_id,
-                delay=100,
-                function=self.spend_stamina,
-                value=4)
+            if self.get_stamina() >= 4:
+                self._set_player_status("sprint", True)
+                custom_funcs.activate_with_temp_forbid(
+                    id=self.sprint_event_id,
+                    delay=100,
+                    function=self.spend_stamina,
+                    value=4)
         else:
             self._set_player_status("sprint", False)
 
@@ -315,9 +317,10 @@ class Player(pygame.sprite.Sprite):
         if key_pressed(K_P, "S"):
             move_y = self.movement_speed
 
-        if key_pressed(K_P, "L_SHIFT") and any_key_pressed(K_P, "W", "S", "A", "D"):
-            move_x *= 1.5
-            move_y *= 1.5
+        if self.get_stamina() >= 4:
+            if key_pressed(K_P, "L_SHIFT") and any_key_pressed(K_P, "W", "S", "A", "D"):
+                move_x *= 1.5
+                move_y *= 1.5
 
         # Нормализуем движение при движении по диагонали
         if move_x != 0 and move_y != 0:
@@ -345,6 +348,15 @@ class Player(pygame.sprite.Sprite):
         self.status_moving()
         self.status_sprint()
         self.status_attack()
+
+        # self.TEST_VALUE += 1
+        # if self.TEST_VALUE > 60:
+        #     self.TEST_VALUE = 0
+        #     print(self.get_stamina())
+        #     print(f"0000 {custom_funcs.get_forbidden_events()} \n===={
+        #           custom_funcs.get_delayed_events()}")
+        #     print(self._get_flag("can_restore_stamina_by_time"))
+        #     print()
 
         # for i in self.inventory:
         #     print(i.name, end=', ')
