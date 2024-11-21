@@ -2,18 +2,19 @@ import pygame
 
 # ./game_constants
 #  Размеры экрана
-SCREEN_WIDTH = 600
-SCREEN_HEIGHT = 400
+SCREEN_WIDTH = 900
+SCREEN_HEIGHT = 600
 
 # Ограничение фпс
 FPS_LIMIT = 60
 
 # Словарь кастомных ивентов
 CUSTOM_EVENTS_IDS = {
-    "event_shoot": 1,
-    "event_reload": 2,
+    "shoot_event": 1,
+    "reload_event": 2,
     "sprint_event": 3,
     "add_stamina_event" : 4,
+    "gun_ends_reloading": 5,
 }
 
 # Словарь для чуть более удобной работы с pygame.key

@@ -108,12 +108,27 @@ def INTERRUPT_ERROR(error_code):
             "Конфликт статусов игрока: Игрок не может быть idle и moving одновременно")
     elif error_code == 2:
         raise InterruptedError(
-            "replace_inventory_cell(index, ITEM) принимет только класс (или его дочерние классы) BasicItem в качестве аргумента ITEM"
+            "replace_inventory_cell(index, ITEM) принимет только класс \
+            (или его дочерние классы) BasicItem в качестве аргумента ITEM"
+        )
+    elif error_code == 3:
+        raise InterruptedError(
+            "set_displaying() может не принимать аргумент *layer, когда \
+            bool=False, но обязан получать *layer, если bool=True. layer обязан быть длиной в 1 эмемент."
         )
 
 # ======================================================== INCLUDING TO GROUPS
 
 
-def add_SELF_to_groups(object, game_groups_dict, including_groups):
+def add_SELF_to_groups(object, game_groups_dict, including_groups, layer=10):
     for group_name in including_groups:
-        game_groups_dict[group_name].add(object)
+        group = game_groups_dict[group_name]
+        if group.__class__ == pygame.sprite.LayeredUpdates:
+            group.add(object, layer=layer)
+        else:
+            group.add(object)
+
+
+def cut_image(image: pygame.image, pos: tuple, size: tuple):
+    new_image = image.subsurface(pygame.Rect(*pos, *size))
+    return new_image
