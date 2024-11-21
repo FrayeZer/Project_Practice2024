@@ -35,6 +35,11 @@ def activate_with_temp_forbid(id: int, delay: int, function, **kwargs):
 
     - Если попытаться привязать другую функцию к уже занятому ID, будет вызвана ошибка, 
       предотвращая случайное переприсвоение ID другой функции.
+
+    - Можно использовать в качестве таймера, создавая ивент в таске пайгейма, передав в качестве
+      функции пустую лямбду, например, lambda: None. Для большего понимания: функция создает ивент 
+      в ивент таске пайгейма с помощью pygame.time.set_timer. При использовании ее с лямбда-функцией, 
+      ЭТА функция становится, как бы, оберткой для более функционального управления таймером.
     '''
     if id not in forbidden_events:
         forbidden_events[id] = function
@@ -42,10 +47,11 @@ def activate_with_temp_forbid(id: int, delay: int, function, **kwargs):
         pygame.time.set_timer(pygame.USEREVENT + id, delay, loops=1)
     else:
         if forbidden_events[id] != function:
-            raise ValueError(
-                f"Невозможно привязать функцию {function} к id {id}, "
-                f"так как id занят функцией {forbidden_events[id]}"
-            )
+            if forbidden_events[id].__name__ != "<lambda>":
+                raise ValueError(
+                    f"Невозможно привязать функцию {function} к id {id}, "
+                    f"так как id занят функцией {forbidden_events[id]}"
+                )
 
 # ======================================================== DELAYED
 
@@ -105,16 +111,16 @@ def any_key_pressed(keys_pressed: list, *args) -> bool:
 def INTERRUPT_ERROR(error_code):
     if error_code == 1:
         raise InterruptedError(
-            "Конфликт статусов игрока: Игрок не может быть idle и moving одновременно")
+            f"Конфликт статусов игрока: Игрок не может быть idle и moving одновременно")
     elif error_code == 2:
         raise InterruptedError(
-            "replace_inventory_cell(index, ITEM) принимет только класс \
-            (или его дочерние классы) BasicItem в качестве аргумента ITEM"
+            f"replace_inventory_cell(index, ITEM) принимет только класс"
+            f"(или его дочерние классы) BasicItem в качестве аргумента ITEM"
         )
     elif error_code == 3:
         raise InterruptedError(
-            "set_displaying() может не принимать аргумент *layer, когда \
-            bool=False, но обязан получать *layer, если bool=True. layer обязан быть длиной в 1 эмемент."
+            f"set_displaying() может не принимать аргумент *layer, когда"
+            f"bool=False, но обязан получать *layer, если bool=True. layer обязан быть длиной в 1 эмемент."
         )
 
 # ======================================================== INCLUDING TO GROUPS

@@ -69,8 +69,9 @@ class Bullet(pygame.sprite.Sprite):
         bullets_group = self.game_groups_dict["bullets_group"]
         units_group = self.game_groups_dict["units_group"]
         first_collided_sprite = pygame.sprite.spritecollideany(
-            self, units_group, )
-        if first_collided_sprite and first_collided_sprite != self.gun.owner:
+            self, units_group)
+        if first_collided_sprite and first_collided_sprite != self.gun.owner \
+                and first_collided_sprite._is_object_displaying():
             first_collided_sprite.take_damage(self.gun.damage)
             self.kill()
 
@@ -138,7 +139,7 @@ class BasicItem(pygame.sprite.Sprite):
 
     def player_takes_item(self, player):
         self.game_groups_dict["player_kit_group"].add(self)
-        self.set_displaying(False, self.displaying_layer)
+        self.set_displaying(False)
 
     def follow_player(self, player: pygame.sprite.Sprite):
         angle = self._get_angle_to_mouse(self.rect.center)

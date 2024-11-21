@@ -67,8 +67,10 @@ class Player(pygame.sprite.Sprite):
 
         self._opened_menus = {
             "Upgrader": False,
+            "Buyer": False,
         }
 
+        self.level_id = 0
         self.TEST_VALUE = 0
 
 # =============================================================== FLAGS
@@ -136,7 +138,6 @@ class Player(pygame.sprite.Sprite):
 
 # =============================================================== STAMINA
 
-
     def spend_stamina(self, value):
         '''Потратить стамину игрока. 
            Если достаточно стамины, уменьшает значение.
@@ -171,6 +172,7 @@ class Player(pygame.sprite.Sprite):
 
 
 # =============================================================== ITEMS & INVENTORY
+
 
     def take_item(self):
         '''Подобрать предмет, если он находится в группе item_sprites_group и еще не в экипировке игрока.'''
@@ -232,20 +234,34 @@ class Player(pygame.sprite.Sprite):
             self.active_slot_index = new_active_slot_index
             self.active_slot.set_displaying(False)
             self.active_slot = self.inventory[self.active_slot_index]
-            self.active_slot.set_displaying(
-                True, self.active_slot.displaying_layer)
+            self.active_slot.set_displaying(True,
+                                            self.active_slot.displaying_layer)
 
 
 # =============================================================== MENUS
 
-    def open_upgrader(self):
+
+    def open_menu(self):
         interactive_collisions = pygame.sprite.spritecollide(
             self, self.game_groups_dict["interactive_objects_group"], dokill=0)
         for obj in interactive_collisions:
-            if obj.name == "Upgrader":
-                if self._is_menu_opened(obj.name) == False:
-                    print("Открытие апгрейдера")
+            if obj._is_object_displaying():
+                if obj.name == "Door":
+                    obj.open(player=self)
+                    self._change_flag("can_move", False)
+                elif self._is_menu_opened(obj.name) == False:
+                    obj.open(player=self)
                     self._set_menu_opened(obj.name, True)
+                    self._change_flag("can_move", False)
+
+    def close_menu(self):
+        interactive_collisions = pygame.sprite.spritecollide(
+            self, self.game_groups_dict["interactive_objects_group"], dokill=0)
+        for obj in interactive_collisions:
+            if self._is_menu_opened(obj.name) == True:
+                obj.close(player=self)
+                self._set_menu_opened(obj.name, False)
+                self._change_flag("can_move", True)
 
 # =============================================================== UPDATE
 
@@ -278,7 +294,10 @@ class Player(pygame.sprite.Sprite):
 
         if key_pressed(K_P, "F"):
             self.take_item()
-            self.open_upgrader()
+            self.open_menu()
+
+        if key_pressed(K_P, "ESC"):
+            self.close_menu()
 
         if key_pressed(K_P, "L_SHIFT") and any_key_pressed(K_P, "W", "A", "S", "D"):
             if self.get_stamina() >= 4:

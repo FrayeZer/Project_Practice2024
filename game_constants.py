@@ -13,9 +13,11 @@ CUSTOM_EVENTS_IDS = {
     "shoot_event": 1,
     "reload_event": 2,
     "sprint_event": 3,
-    "add_stamina_event" : 4,
+    "add_stamina_event": 4,
     "gun_ends_reloading_event": 5,
-    "restore_stamina_by_time_event": 6
+    "restore_stamina_by_time_event": 6,
+    "open_door_event": 7,
+    "level_started_event": 8,
 }
 
 # Словарь для чуть более удобной работы с pygame.key

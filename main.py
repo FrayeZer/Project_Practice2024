@@ -1,8 +1,8 @@
 # ./main.py
 import pygame
 import sys
-import game_constants
-import custom_funcs
+import game_constants as gc
+import custom_funcs as cf
 
 import custom_sprites.player_sprite as player_sprite
 import custom_sprites.items_sprites as items_sprites
@@ -30,6 +30,7 @@ class Game:
         self.units_group = pygame.sprite.Group()
         self.interactive_objects_group = pygame.sprite.Group()
         self.menus_group = pygame.sprite.Group()
+        self.zero_level_group = pygame.sprite.Group()
 
         self.game_groups_dict = {
             "all_sprites_group": self.all_sprites_group,
@@ -41,7 +42,11 @@ class Game:
             "units_group": self.units_group,
             "interactive_objects_group": self.interactive_objects_group,
             "menus_group": self.menus_group,
+            "zero_level_group": self.zero_level_group,
         }
+
+        # Внутригровые процессы
+        self.level_id = 0  # 0 - Safe зона; 1, 2, ..., n - айди уровня
 
         # Инициализация ключевых спрайтов или групп спрайтов
         self.__init_fonts()
@@ -51,13 +56,13 @@ class Game:
         self.__init_interactive_objects()
 
     def __apply_screen_settings(self):
-        self.screen_width = game_constants.SCREEN_WIDTH
-        self.screen_height = game_constants.SCREEN_HEIGHT
+        self.screen_width = gc.SCREEN_WIDTH
+        self.screen_height = gc.SCREEN_HEIGHT
         self.screen = pygame.display.set_mode(
             (self.screen_width, self.screen_height))
         pygame.display.set_caption("Game")
         self.clock = pygame.time.Clock()
-        self.fps_limit = game_constants.FPS_LIMIT
+        self.fps_limit = gc.FPS_LIMIT
 
     def __init_fonts(self):
         self.fps_label = pygame.font.SysFont("Times New Roman", 24)
@@ -68,7 +73,7 @@ class Game:
                                                            "all_sprites_group",
                                                            "map_kit_group",
                                                            "player_kit_group",
-                                                           "units_group"])
+                                                           "units_group",])
         self.player.rect.center = (self.screen_width // 2,
                                    self.screen_height // 2)
         # ...
@@ -78,14 +83,16 @@ class Game:
                                                initial_groups=["displaying_objects_group",
                                                                "all_sprites_group",
                                                                "map_kit_group",
-                                                               "units_group"])
+                                                               "units_group",
+                                                               "zero_level_group"])
 
     def __add_guns_into_the_map(self):
         self.pistol = items_sprites.Pistol(game_groups_dict=self.game_groups_dict,
                                            initial_groups=["displaying_objects_group",
                                                            "all_sprites_group",
                                                            "map_kit_group",
-                                                           "item_sprites_group"])
+                                                           "item_sprites_group",
+                                                           "zero_level_group"])
         self.pistol.set_owner(self.player)
         self.pistol.rect.center = (
             self.screen_width // 2, self.screen_height // 2)
@@ -93,6 +100,33 @@ class Game:
     def __init_interactive_objects(self):
         self.upgrader = ui_sprites.Upgrader(
             game_groups_dict=self.game_groups_dict)
+        self.buyer = ui_sprites.Buyer(
+            game_groups_dict=self.game_groups_dict)
+        self.door = ui_sprites.Door(
+            game_groups_dict=self.game_groups_dict)
+
+
+# ========================================================== GAME
+
+    def get_next_level_id(self):
+        return 1
+
+    def get_level_id(self):
+        return self.level_id
+
+    def change_level(self, level_id: int):
+        self.level_id = level_id
+        self.player.level_id = level_id
+
+        for sprite in self.zero_level_group:
+            if not sprite in self.player_kit_group:
+                sprite.set_displaying(False)
+
+    def create_level(self, level):
+        pass
+
+
+# ========================================================== UPDATE
 
     def draw_fps(self):
         fps_text = self.fps_label.render(
@@ -120,14 +154,19 @@ class Game:
             elif event.type >= pygame.USEREVENT:
                 event_id = event.type - pygame.USEREVENT
                 # Обработка событий с ограничением по количеству вызовов за `time` секунд
-                if event_id in custom_funcs.get_forbidden_events():
-                    custom_funcs.remove_forbidden_event(event_id)
+                if event_id in cf.get_forbidden_events():
+                    cf.remove_forbidden_event(event_id)
 
                 # Обработка событий с отложенным вызовом
-                elif event_id in custom_funcs.get_delayed_events():
-                    kwargs = custom_funcs.get_delayed_event(event_id)[1]
-                    custom_funcs.get_delayed_event(event_id)[0](**kwargs)
-                    custom_funcs.remove_delayed_event(event_id)
+                elif event_id in cf.get_delayed_events():
+                    kwargs = cf.get_delayed_event(event_id)[1]
+                    cf.get_delayed_event(event_id)[0](**kwargs)
+                    cf.remove_delayed_event(event_id)
+
+                if event_id == gc.CUSTOM_EVENTS_IDS["level_started_event"]:
+                    if self.level_id == 0:
+                        self.change_level(self.get_next_level_id())
+                        print(f"level {self.level_id} started")
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.player.process_mouse(
