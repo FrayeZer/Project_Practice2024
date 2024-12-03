@@ -9,10 +9,24 @@ import custom_sprites.items_sprites as items_sprites
 import custom_sprites.enemy_sprites as enemy_sprites
 import custom_sprites.ui_sprites as ui_sprites
 
+from ingame_processes import GameProcess, Level
+
 
 class Game:
     def __init__(self):
         pygame.init()
+
+        # Внутригровые процессы
+        self.unit_types = {"Skeleton": enemy_sprites.Skeleton,
+                           "Buyer": ui_sprites.Buyer,
+                           "EnterDoor": ui_sprites.EnterDoor,
+                           "ExitDoor": ui_sprites.ExitDoor,
+                           "Upgrader": ui_sprites.Upgrader}
+        self.level = Level(self)
+        self.level.id = 0  # 0 - Safe зона; 1, 2, ..., n - айди
+        self.levels_completed = 1
+        self.game_process = GameProcess(self)
+
         # Настройка отображения окна приложения
         self.__apply_screen_settings()
 
@@ -30,7 +44,6 @@ class Game:
         self.units_group = pygame.sprite.Group()
         self.interactive_objects_group = pygame.sprite.Group()
         self.menus_group = pygame.sprite.Group()
-        self.zero_level_group = pygame.sprite.Group()
 
         self.game_groups_dict = {
             "all_sprites_group": self.all_sprites_group,
@@ -42,18 +55,29 @@ class Game:
             "units_group": self.units_group,
             "interactive_objects_group": self.interactive_objects_group,
             "menus_group": self.menus_group,
-            "zero_level_group": self.zero_level_group,
+            "any_level_group": self.level.any_level_group,
         }
-
-        # Внутригровые процессы
-        self.level_id = 0  # 0 - Safe зона; 1, 2, ..., n - айди уровня
 
         # Инициализация ключевых спрайтов или групп спрайтов
         self.__init_fonts()
         self.__init_player()
-        self.__add_guns_into_the_map()
-        self.__init_enemy()
-        self.__init_interactive_objects()
+        # self.__add_guns_into_the_map()
+        # self.__init_enemy()
+        # self.__init_interactive_objects()
+
+        first_gun = items_sprites.Pistol(game_groups_dict=self.game_groups_dict,
+                                         initial_groups=["displaying_objects_group",
+                                                         "all_sprites_group",
+                                                         "map_kit_group",
+                                                         "player_kit_group",
+                                                         "item_sprites_group",
+                                                         "any_level_group"])
+        first_gun.set_owner(self.player)
+        self.player.add_to_inventory(first_gun)
+
+        self.game_process.change_level_to(0)
+
+        # self.__draw_background()
 
     def __apply_screen_settings(self):
         self.screen_width = gc.SCREEN_WIDTH
@@ -63,6 +87,9 @@ class Game:
         pygame.display.set_caption("Game")
         self.clock = pygame.time.Clock()
         self.fps_limit = gc.FPS_LIMIT
+
+    # def __draw_background(self):
+    #     self.screen.blit()
 
     def __init_fonts(self):
         self.fps_label = pygame.font.SysFont("Times New Roman", 24)
@@ -79,12 +106,13 @@ class Game:
         # ...
 
     def __init_enemy(self):
-        self.skeleton = enemy_sprites.Skeleton(game_groups_dict=self.game_groups_dict,
-                                               initial_groups=["displaying_objects_group",
-                                                               "all_sprites_group",
-                                                               "map_kit_group",
-                                                               "units_group",
-                                                               "zero_level_group"])
+        # self.skeleton = enemy_sprites.Skeleton(game_groups_dict=self.game_groups_dict,
+        #    initial_groups=["displaying_objects_group",
+        #                    "all_sprites_group",
+        #                    "map_kit_group",
+        #                    "units_group",
+        #                    "zero_level_group"])
+        pass
 
     def __add_guns_into_the_map(self):
         self.pistol = items_sprites.Pistol(game_groups_dict=self.game_groups_dict,
@@ -92,35 +120,22 @@ class Game:
                                                            "all_sprites_group",
                                                            "map_kit_group",
                                                            "item_sprites_group",
-                                                           "zero_level_group"])
+                                                           "any_level_group"])
         self.pistol.set_owner(self.player)
         self.pistol.rect.center = (
             self.screen_width // 2, self.screen_height // 2)
-
-    def __init_interactive_objects(self):
-        self.upgrader = ui_sprites.Upgrader(
-            game_groups_dict=self.game_groups_dict)
-        self.buyer = ui_sprites.Buyer(
-            game_groups_dict=self.game_groups_dict)
-        self.door = ui_sprites.Door(
-            game_groups_dict=self.game_groups_dict)
 
 
 # ========================================================== GAME
 
     def get_next_level_id(self):
-        return 1
+        return self.level.id + self.levels_completed
 
     def get_level_id(self):
-        return self.level_id
+        return self.level.id
 
     def change_level(self, level_id: int):
-        self.level_id = level_id
-        self.player.level_id = level_id
-
-        for sprite in self.zero_level_group:
-            if not sprite in self.player_kit_group:
-                sprite.set_displaying(False)
+        self.game_process.change_level_to(level_id)
 
     def create_level(self, level):
         pass
@@ -164,9 +179,13 @@ class Game:
                     cf.remove_delayed_event(event_id)
 
                 if event_id == gc.CUSTOM_EVENTS_IDS["level_started_event"]:
-                    if self.level_id == 0:
-                        self.change_level(self.get_next_level_id())
-                        print(f"level {self.level_id} started")
+                    self.change_level(self.get_next_level_id())
+                    print(f"level {self.level.id} started")
+
+                if event_id == gc.CUSTOM_EVENTS_IDS["level_ended_event"]:
+                    self.change_level(0)
+                    self.levels_completed += 1
+                    print("returning back to safe zone")
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.player.process_mouse(
@@ -179,6 +198,7 @@ class Game:
         self.all_sprites_group.update(
             keys_pressed=pygame.key.get_pressed(),
             player=self.player)
+        self.level.update()
 
         # for l in self.game_groups_dict["displaying_objects_group"].layers():
         #     f = self.game_groups_dict["displaying_objects_group"].get_sprites_from_layer(l)

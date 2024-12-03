@@ -1,0 +1,46 @@
+{
+    "map_image": "levels/level1/map_image.png",
+    "wave_count": 2,
+    "wave_1": {
+        "units": {
+            "Skeleton": [
+                [
+                    300,
+                    100
+                ],
+                [
+                    150,
+                    100
+                ],
+                [
+                    350,
+                    150
+                ]
+            ]
+        }
+    },
+    "wave_2": {
+        "units": {
+            "Skeleton": [
+                [
+                    400,
+                    100
+                ],
+                [
+                    150,
+                    150
+                ]
+            ]
+        }
+    },
+    "wave_3": {
+        "units": {
+            "Skeleton": [
+                [
+                    400,
+                    200
+                ]
+            ]
+        }
+    }
+}

@@ -1,7 +1,7 @@
 import pygame
-import game_constants
+import game_constants as gc
 import custom_sprites.items_sprites as items_sprites
-import custom_funcs
+import custom_funcs as cf
 from custom_funcs import key_pressed, any_key_pressed, add_SELF_to_groups
 
 
@@ -49,9 +49,9 @@ class Player(pygame.sprite.Sprite):
         # Список предметов, которые игрок может получить
         # только объекты из следующего списка классов можно (не принудительно) получить в инвентарь
         self.unlocked_items = [items_sprites.Pistol]
-        self.sprint_event_id = game_constants.CUSTOM_EVENTS_IDS['sprint_event']
-        self.add_stamina_event_id = game_constants.CUSTOM_EVENTS_IDS['add_stamina_event']
-        self.restore_stamina_by_time_event_id = game_constants.CUSTOM_EVENTS_IDS[
+        self.sprint_event_id = gc.CUSTOM_EVENTS_IDS['sprint_event']
+        self.add_stamina_event_id = gc.CUSTOM_EVENTS_IDS['add_stamina_event']
+        self.restore_stamina_by_time_event_id = gc.CUSTOM_EVENTS_IDS[
             "restore_stamina_by_time_event"]
         self._flags = {
             "can_restore_stamina_by_time": True,
@@ -101,7 +101,7 @@ class Player(pygame.sprite.Sprite):
         '''Функция для обработки статуса игрока "idle" (неактивен).'''
         if self._status["idle"]:
             if self._status["moving"]:
-                custom_funcs.INTERRUPT_ERROR(1)
+                cf.INTERRUPT_ERROR(1)
             pass
         else:
             pass
@@ -142,7 +142,7 @@ class Player(pygame.sprite.Sprite):
         '''Потратить стамину игрока. 
            Если достаточно стамины, уменьшает значение.
            Запускает восстановление стамины через 2000 мс.'''
-        custom_funcs.delayed_activating(
+        cf.delayed_activating(
             id=self.add_stamina_event_id,
             delay=2000,
             function=self._change_flag,
@@ -157,7 +157,7 @@ class Player(pygame.sprite.Sprite):
     def restore_stamina_by_time(self):
         '''Функция для восстановления стамины игрока со временем.'''
         if self._get_flag("can_restore_stamina_by_time"):
-            custom_funcs.activate_with_temp_forbid(
+            cf.activate_with_temp_forbid(
                 id=self.restore_stamina_by_time_event_id,
                 delay=125,
                 function=self.add_stamina,
@@ -223,7 +223,7 @@ class Player(pygame.sprite.Sprite):
     def replace_inventory_cell(self, index: int, item):
         '''Принудительно заменяет конкретный элемент инвентаря на новый, убивая старый.'''
         if not isinstance(item, items_sprites.BasicItem):
-            custom_funcs.INTERRUPT_ERROR(2)
+            cf.INTERRUPT_ERROR(2)
         self.inventory[index].kill()
         self.inventory[index] = item.deepcopy()
 
@@ -302,7 +302,7 @@ class Player(pygame.sprite.Sprite):
         if key_pressed(K_P, "L_SHIFT") and any_key_pressed(K_P, "W", "A", "S", "D"):
             if self.get_stamina() >= 4:
                 self._set_player_status("sprint", True)
-                custom_funcs.activate_with_temp_forbid(
+                cf.activate_with_temp_forbid(
                     id=self.sprint_event_id,
                     delay=100,
                     function=self.spend_stamina,
@@ -348,8 +348,8 @@ class Player(pygame.sprite.Sprite):
             move_y /= slowdown_ratio
 
         if self._get_flag("can_move"):
-            self.rect.x += move_x / game_constants.FPS_LIMIT
-            self.rect.y += move_y / game_constants.FPS_LIMIT
+            self.rect.x += move_x / gc.FPS_LIMIT
+            self.rect.y += move_y / gc.FPS_LIMIT
 
     def update(self, **kwargs):
         '''Обновляет состояние игрока каждый кадр'''
@@ -372,8 +372,8 @@ class Player(pygame.sprite.Sprite):
         # if self.TEST_VALUE > 60:
         #     self.TEST_VALUE = 0
         #     print(self.get_stamina())
-        #     print(f"0000 {custom_funcs.get_forbidden_events()} \n===={
-        #           custom_funcs.get_delayed_events()}")
+        #     print(f"0000 {cf.get_forbidden_events()} \n===={
+        #           cf.get_delayed_events()}")
         #     print(self._get_flag("can_restore_stamina_by_time"))
         #     print()
 

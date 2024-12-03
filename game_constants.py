@@ -6,7 +6,7 @@ SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 600
 
 # Ограничение фпс
-FPS_LIMIT = 60
+FPS_LIMIT = 50
 
 # Словарь кастомных ивентов
 CUSTOM_EVENTS_IDS = {
@@ -18,6 +18,8 @@ CUSTOM_EVENTS_IDS = {
     "restore_stamina_by_time_event": 6,
     "open_door_event": 7,
     "level_started_event": 8,
+    "return_to_zero_level_event": 9,
+    "level_ended_event": 10,
 }
 
 # Словарь для чуть более удобной работы с pygame.key

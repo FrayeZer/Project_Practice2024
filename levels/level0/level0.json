@@ -1,0 +1,17 @@
+{
+    "map_image": "levels/level1/map_image.png",
+    "wave_count": 1,
+    "wave_1": {
+        "units": {
+            "Upgrader": [
+                null
+            ],
+            "EnterDoor": [
+                null
+            ],
+            "Buyer": [
+                null
+            ]
+        }
+    }
+}

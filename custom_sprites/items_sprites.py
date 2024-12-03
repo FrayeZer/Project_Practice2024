@@ -70,6 +70,10 @@ class Bullet(pygame.sprite.Sprite):
         units_group = self.game_groups_dict["units_group"]
         first_collided_sprite = pygame.sprite.spritecollideany(
             self, units_group)
+
+        # print(first_collided_sprite, first_collided_sprite != self.gun.owner, first_collided_sprite and first_collided_sprite != self.gun.owner
+        #       and first_collided_sprite._is_object_displaying())
+
         if first_collided_sprite and first_collided_sprite != self.gun.owner \
                 and first_collided_sprite._is_object_displaying():
             first_collided_sprite.take_damage(self.gun.damage)

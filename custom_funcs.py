@@ -1,6 +1,7 @@
 # ./custom_funcs.py
 import pygame
 import game_constants
+import json
 
 forbidden_events = {}
 delayed_events = {}
@@ -135,6 +136,16 @@ def add_SELF_to_groups(object, game_groups_dict, including_groups, layer=10):
             group.add(object)
 
 
+# ======================================================== IMAGES
+
 def cut_image(image: pygame.image, pos: tuple, size: tuple):
     new_image = image.subsurface(pygame.Rect(*pos, *size))
     return new_image
+
+
+# ======================================================== JSON
+
+def read_json(path) -> dict:
+    with open(path, mode='r', encoding='UTF8') as file:
+        readed = json.load(file)
+    return readed
