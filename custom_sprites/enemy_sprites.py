@@ -1,4 +1,5 @@
 import pygame
+import pygame.locals
 import custom_funcs as cf
 import game_constants as gc
 import random
@@ -42,7 +43,7 @@ class HpBar(pygame.sprite.Sprite):
 
     def update(self, **kwargs):
         self.set_displaying(self.owner._is_object_displaying(), self.layer)
-        self.rect.x = self.owner.rect.centerx - self.owner.image.get_width() / 2
+        self.rect.x = self.owner.rect.centerx - self.owner.image.get_width() / 2 + 10
         self.rect.y = self.owner.rect.y - 20
         self.image.fill((128, 64, 64))
         pygame.draw.rect(self.image, (255, 64, 64), (2, 2, 36 *
@@ -289,6 +290,11 @@ class Skeleton(BasicEnemy):
         self.game = game
         super().__init__(game, game_groups_dict=game_groups_dict,
                          initial_groups=initial_groups, start_pos=start_pos)
+        image = pygame.image.load("textures/skeleton.png")
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = start_pos[0]
+        self.rect.y = start_pos[1]
 
     def update(self, **kwargs):
         self.check_collisions()

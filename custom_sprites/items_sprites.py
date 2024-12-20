@@ -28,7 +28,7 @@ class Barrier(pygame.sprite.Sprite):
         self.size = size
         self.pos = pos
         self.image = pygame.Surface(self.size, pygame.SRCALPHA)
-        self.image.fill((255, 255, 255, 128))
+        self.image.fill((255, 255, 255, 0))
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = self.pos
 
@@ -163,6 +163,7 @@ class BasicItem(pygame.sprite.Sprite):
         self.image = pygame.Surface((10, 10), pygame.SRCALPHA)
         # self.image.fill((255, 255, 255))
         self.original_image = self.image.copy()
+        self.original_image2 = self.original_image.copy()
         self.image_scale = 1
         self.image_angle = 0
         self.image_mirror_x = False
@@ -222,8 +223,8 @@ class BasicItem(pygame.sprite.Sprite):
         sin = math.sin(angle)
         cos = math.cos(angle)
         self.rect.center = (
-            player.rect.x + 20 + (10 * -cos),
-            player.rect.y + 30 + (10 * -sin)
+            player.rect.x + 10,
+            player.rect.y + 50
         )
 
     def follow_enemy(self, enemy, player):
@@ -234,8 +235,8 @@ class BasicItem(pygame.sprite.Sprite):
         sin = math.sin(angle)
         cos = math.cos(angle)
         self.rect.center = (
-            enemy.rect.x + 20 + (10 * -cos),
-            enemy.rect.y + 30 + (10 * -sin)
+            enemy.rect.x + 35 + (10 * -cos),
+            enemy.rect.y + 70 + (10 * -sin)
         )
 
     def _get_angle_to(self, first_point, second_point):
@@ -392,8 +393,8 @@ class Pistol(Gun):
         self.ammo = 20
         self.shots_left = self.ammo
         self.fire_rate = 300
-
-        self.image = cut_image(IMG_WEAPONS, (0, 118), (12, 10), scale=3)
+        self.original_image2 = cut_image(IMG_WEAPONS, (0, 118), (12, 10), scale=3)
+        self.image = cut_image(IMG_WEAPONS, (0, 118), (12, 10), scale=2)
         self.original_image = self.image.copy()
 
 
@@ -406,3 +407,16 @@ class SplashGun(BasicItem):
         self.rect = self.image.get_rect()
 
         self.name = "SplashGun"
+        
+# class FS_BOX(Barrier):
+#     def __init__(self, game_groups_dict, pos, size):
+#         super().__init__(game_groups_dict, pos, size)
+        
+
+#         self.size = size
+#         self.pos = pos
+#         self.image = pygame.Surface(self.size, pygame.SRCALPHA)
+#         self.image.fill((255, 255, 255, 128))
+#         self.rect = self.image.get_rect()
+#         self.rect.x, self.rect.y = self.pos
+        

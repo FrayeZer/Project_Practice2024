@@ -19,9 +19,8 @@ class Player(pygame.sprite.Sprite):
         self.displaying_layer = 10
         add_SELF_to_groups(self, game_groups_dict,
                            initial_groups, layer=self.displaying_layer)
-
-        self.image = pygame.Surface((50, 50))
-        self.image.fill((0, 255, 0))
+        image = pygame.image.load("textures/player.png")
+        self.image = image
         self.rect = self.image.get_rect()
 
         # Инициализация статистик игрока
@@ -79,6 +78,7 @@ class Player(pygame.sprite.Sprite):
 
         self.level_id = 0
         self.TEST_VALUE = 0
+        self.balance = 0
 
 # =============================================================== FLAGS
 
@@ -148,6 +148,7 @@ class Player(pygame.sprite.Sprite):
 
 # =============================================================== STAMINA
 
+
     def spend_stamina(self, value):
         '''Потратить стамину игрока. 
            Если достаточно стамины, уменьшает значение.
@@ -182,7 +183,6 @@ class Player(pygame.sprite.Sprite):
 
 
 # =============================================================== ITEMS & INVENTORY
-
 
     def take_item(self):
         '''Подобрать предмет, если он находится в группе item_sprites_group и еще не в экипировке игрока.'''
@@ -251,7 +251,6 @@ class Player(pygame.sprite.Sprite):
 
 # =============================================================== MENUS
 
-
     def open_menu(self):
         interactive_collisions = pygame.sprite.spritecollide(
             self, self.game_groups_dict["interactive_objects_group"], dokill=0)
@@ -261,9 +260,10 @@ class Player(pygame.sprite.Sprite):
                     obj.open(player=self, game=self.game)
                     self._change_flag("can_move", False)
                 elif self._is_menu_opened(obj.name) == False:
-                    obj.open(player=self, game=self.game)
-                    self._set_menu_opened(obj.name, True)
-                    self._change_flag("can_move", False)
+                    cf.activate_with_temp_forbid(
+                        id=11, delay=1000, function=obj.open, player=self, game=self.game)
+                    # self._set_menu_opened(obj.name, True)
+                    # self._change_flag("can_move", False)
 
     def close_menu(self):
         interactive_collisions = pygame.sprite.spritecollide(

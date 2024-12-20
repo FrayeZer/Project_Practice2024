@@ -1,6 +1,7 @@
 import pygame
 import game_constants as gc
 import custom_funcs as cf
+import random
 
 from custom_funcs import add_SELF_to_groups
 IMG_UI = pygame.image.load("textures/UI.png")
@@ -104,8 +105,8 @@ class Buyer(Ui):
         add_SELF_to_groups(self, self.game_groups_dict,
                            self.initial_groups, layer=self.displaying_layer)
 
-        self.image = pygame.Surface((40, 80))
-        self.image.fill((128, 64, 128))
+        image = pygame.image.load("textures/buyer.png")
+        self.image = cf.cut_image(image, (0, 0), (67, 81), scale=1.5)
         self.rect = self.image.get_rect()
 
         self.rect.x = gc.SCREEN_WIDTH - 50 - self.image.get_width()
@@ -114,6 +115,11 @@ class Buyer(Ui):
     def open(self, **kwargs):
         player = kwargs["player"]
         print("Открытие скупщика")
+        player.add_hp(10)
+        a = random.randint(1, 12)
+        print(a)
+        if a == 1:
+            player.take_damage(1000)
 
     def close(self, **kwargs):
         player = kwargs["player"]
@@ -141,8 +147,8 @@ class EnterDoor(Door):
     def __init__(self, game, game_groups_dict, initial_groups, start_pos):
         self.game = game
         super().__init__(game, game_groups_dict, initial_groups, start_pos)
-        self.image = pygame.Surface((80, 20))
-        self.image.fill((255, 64, 64))
+        self.image = pygame.Surface((80, 20), pygame.SRCALPHA)
+        # self.image.fill((255, 64, 64))
         self.rect = self.image.get_rect()
         self.rect.x = gc.SCREEN_WIDTH / 2 - self.image.get_width() / 2
         self.rect.y = 85
@@ -166,11 +172,11 @@ class ExitDoor(Door):
     def __init__(self, game, game_groups_dict, initial_groups, start_pos):
         self.game = game
         super().__init__(game, game_groups_dict, initial_groups, start_pos)
-        self.image = pygame.Surface((80, 20))
-        self.image.fill((255, 64, 64))
+        image = pygame.image.load("textures/portal.png")
+        self.image = cf.cut_image(image, (0, 0), (58, 31), 2)
         self.rect = self.image.get_rect()
         self.rect.x = gc.SCREEN_WIDTH / 2 - self.image.get_width() / 2
-        self.rect.y = 500
+        self.rect.y = 450
 
     def open(self, **kwargs):
         print("EXIT")
@@ -216,7 +222,7 @@ class InventotyCell(Ui):
         self.bg = self.passive_bg_image
 
         self.item = item
-        self.item_image = self.item.original_image
+        self.item_image = self.item.original_image2
 
         self.image = pygame.Surface((56, 56), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
@@ -225,7 +231,7 @@ class InventotyCell(Ui):
 
     def update_texture(self):
         self.item = self.player.inventory.items[self.index]
-        self.item_image = self.item.original_image
+        self.item_image = self.item.original_image2
 
         if self.index == self.player.active_slot_index:
             self.bg = self.active_bg_image
@@ -305,6 +311,20 @@ class WoodenBgBar(Ui):
 
 
 class PauseButton(Ui):
+    def __init__(self, game, game_groups_dict, initial_groups, start_pos):
+        super().__init__(game, game_groups_dict, initial_groups, start_pos)
+        self.image = cf.cut_image(
+            IMG_UI, (39, 1), (18, 18), scale=3)
+        self.rect = self.image.get_rect()
+        self.rect.x = 15
+        self.rect.y = 15
+        cf.add_SELF_to_groups(object=self,
+                              game_groups_dict=self.game_groups_dict,
+                              including_groups=initial_groups,
+                              layer=14)
+
+
+class Money(Ui):
     def __init__(self, game, game_groups_dict, initial_groups, start_pos):
         super().__init__(game, game_groups_dict, initial_groups, start_pos)
         self.image = cf.cut_image(

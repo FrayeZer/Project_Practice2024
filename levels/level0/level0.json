@@ -3,9 +3,6 @@
     "wave_count": 1,
     "wave_1": {
         "units": {
-            "Upgrader": [
-                null
-            ],
             "EnterDoor": [
                 null
             ],

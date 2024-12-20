@@ -14,6 +14,7 @@ import custom_sprites.ui_sprites as ui_sprites
 from ingame_processes import GameProcess, Level
 
 IMG_MAIN_MENU = pygame.image.load("textures/main_menu_screen.png")
+IMG_LOSE_SCREEN = pygame.image.load("textures/lose_screen.png")
 IMG_UI = pygame.image.load("textures/UI.png")
 
 
@@ -28,7 +29,9 @@ class Game:
                            "Buyer": ui_sprites.Buyer,
                            "EnterDoor": ui_sprites.EnterDoor,
                            "ExitDoor": ui_sprites.ExitDoor,
-                           "Upgrader": ui_sprites.Upgrader}
+                           "Upgrader": ui_sprites.Upgrader,
+                           "Barrier": items_sprites.Barrier,}   
+                        #    "FS_BOX": items_sprites.FS_BOX}
         self.level = Level(self)
         self.level.id = 0  # 0 - Safe зона; 1, 2, ..., n - айди
         self.levels_completed = 1
@@ -107,6 +110,7 @@ class Game:
     def __init_fonts(self):
         self.fps_label = pygame.font.SysFont("Monocraft", 12)
         self.ammo_label = pygame.font.SysFont("Monocraft", 24)
+        self.balance_label = pygame.font.SysFont("Monocraft", 24)
 
     def __init_player(self):
         self.player = player_sprite.Player(game_groups_dict=self.game_groups_dict,
@@ -139,12 +143,12 @@ class Game:
                                                                     "menus_group"],
                                                     start_pos=[])
 
-        self.pause_button = ui_sprites.PauseButton(game=self,
-                                                    game_groups_dict=self.game_groups_dict,
-                                                    initial_groups=["displaying_objects_group",
-                                                                    "all_sprites_group",
-                                                                    "menus_group"],
-                                                    start_pos=[])
+        # self.pause_button = ui_sprites.PauseButton(game=self,
+        #                                             game_groups_dict=self.game_groups_dict,
+        #                                             initial_groups=["displaying_objects_group",
+        #                                                             "all_sprites_group",
+        #                                                             "menus_group"],
+                                                    # start_pos=[])
         self.player_hp_bar_bg = ui_sprites.PlayerHpBarBg(game=self,
                                                     game_groups_dict=self.game_groups_dict,
                                                     initial_groups=["displaying_objects_group",
@@ -182,6 +186,11 @@ class Game:
         fps_text = self.fps_label.render(
             f"FPS: {int(self.clock.get_fps())}", True, (255, 255, 255))
         self.screen.blit(fps_text, (10, 10))
+    
+    def draw_balance(self):
+        balance_text = self.fps_label.render(
+            f"Balace: {int(self.player.balance)}", True, (255, 255, 255))
+        self.screen.blit(balance_text, (10, 10))
 
     def draw_ammo_count(self):
         player_active_item = self.player.active_slot
@@ -234,7 +243,7 @@ class Game:
     def render(self) -> None:
         self.screen.fill((0, 0, 0))
         self.displaying_objects_group.draw(self.screen)
-        # self.draw_fps()
+        self.draw_fps()
         self.draw_menu(self.window)
         pygame.display.flip()
         self.clock.tick(self.fps_limit)
@@ -242,10 +251,12 @@ class Game:
     def draw_menu(self, window) -> None:
         if window == "game":
             self.draw_ammo_count()
+            self.draw_balance()
         if window == "main_menu":
             self.screen.blit(IMG_MAIN_MENU, (0, 0))
         if window == "lose_screen":
-            pass
+            self.screen.blit(IMG_LOSE_SCREEN, (0, 0))
+
 
     def process_menu(self):
         if self.window == "main_menu":
@@ -253,10 +264,16 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                elif event.type == pygame.MOUSEBUTTONDOWN:
+                elif event.type == pygame.MOUSEBUTTONDOWN or any(pygame.key.get_pressed()):
                     self.window = "game"
-        elif self.window == "game":
-            pass
+        elif self.window == "lose_screen":
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN or any(pygame.key.get_pressed()):
+                    pygame.quit()
+                    sys.exit()
 
     def run(self):
         while True:
