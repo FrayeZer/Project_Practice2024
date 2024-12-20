@@ -3,11 +3,78 @@ import pygame
 import math
 import game_constants
 import custom_funcs
+import time
+import random
+import custom_sprites.enemy_sprites as enemy_sprites
 
 from game_constants import CUSTOM_EVENTS_IDS
 from custom_funcs import add_SELF_to_groups, cut_image, activate_with_temp_forbid, delayed_activating
 
 IMG_WEAPONS = pygame.image.load("textures/weapons.png")
+
+
+class Barrier(pygame.sprite.Sprite):
+    def __init__(self, game_groups_dict: dict, pos: tuple, size: tuple):
+        super().__init__()
+        self.game_groups_dict = game_groups_dict
+        self.initial_groups = ["displaying_objects_group",
+                               "all_sprites_group",
+                               "map_kit_group",
+                               "barriers_group"]
+        add_SELF_to_groups(self, game_groups_dict,
+                           self.initial_groups,
+                           layer=90)
+
+        self.size = size
+        self.pos = pos
+        self.image = pygame.Surface(self.size, pygame.SRCALPHA)
+        self.image.fill((255, 255, 255, 128))
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = self.pos
+
+        self.collision_states = {
+            "top": False,
+            "bottom": False,
+            "left": False,
+            "right": False,
+        }
+
+    def process(self, player):
+        player = player
+        self.collision_states = {key: False for key in self.collision_states}
+
+        overlap_left = player.rect.right - self.rect.left
+        overlap_right = self.rect.right - player.rect.left
+        overlap_top = player.rect.bottom - self.rect.top
+        overlap_bottom = self.rect.bottom - player.rect.top
+
+        overlaps = {
+            "left": abs(overlap_left),
+            "right": abs(overlap_right),
+            "top": abs(overlap_top),
+            "bottom": abs(overlap_bottom),
+        }
+
+        if player.rect.colliderect(self.rect):
+            min_side = min(overlaps, key=overlaps.get)
+
+            self.collision_states[min_side] = True
+
+    def colliding_top(self) -> bool:
+        """Возвращает состояние столкновения с верхней стороной."""
+        return self.collision_states["top"]
+
+    def colliding_bottom(self) -> bool:
+        """Возвращает состояние столкновения с нижней стороной."""
+        return self.collision_states["bottom"]
+
+    def colliding_left(self) -> bool:
+        """Возвращает состояние столкновения с левой стороной."""
+        return self.collision_states["left"]
+
+    def colliding_right(self) -> bool:
+        """Возвращает состояние столкновения с правой стороной."""
+        return self.collision_states["right"]
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -70,13 +137,13 @@ class Bullet(pygame.sprite.Sprite):
         units_group = self.game_groups_dict["units_group"]
         first_collided_sprite = pygame.sprite.spritecollideany(
             self, units_group)
-
-        # print(first_collided_sprite, first_collided_sprite != self.gun.owner, first_collided_sprite and first_collided_sprite != self.gun.owner
-        #       and first_collided_sprite._is_object_displaying())
-
         if first_collided_sprite and first_collided_sprite != self.gun.owner \
-                and first_collided_sprite._is_object_displaying():
-            first_collided_sprite.take_damage(self.gun.damage)
+                and first_collided_sprite._is_object_displaying() \
+        and not isinstance(first_collided_sprite, self.gun.owner.__class__):
+            first_collided_sprite.take_damage(
+                self.gun.damage * self.gun.owner.damage_multiplier)
+            self.kill()
+        if pygame.sprite.spritecollideany(self, self.game_groups_dict["barriers_group"]):
             self.kill()
 
     def update(self, **kwargs):
@@ -94,12 +161,14 @@ class BasicItem(pygame.sprite.Sprite):
         add_SELF_to_groups(self, game_groups_dict,
                            initial_groups, layer=self.displaying_layer)
         self.image = pygame.Surface((10, 10), pygame.SRCALPHA)
-        self.image.fill((255, 255, 255))
+        # self.image.fill((255, 255, 255))
         self.original_image = self.image.copy()
         self.image_scale = 1
         self.image_angle = 0
         self.image_mirror_x = False
         self.rect = self.image.get_rect()
+
+        self.timer = time.time() + 1
 
         # Базовые параметры
         self.name = "An_Item"
@@ -146,21 +215,33 @@ class BasicItem(pygame.sprite.Sprite):
         self.set_displaying(False)
 
     def follow_player(self, player: pygame.sprite.Sprite):
-        angle = self._get_angle_to_mouse(self.rect.center)
+        angle = self._get_angle_to(self.rect.center, pygame.mouse.get_pos())
 
         # Для поворота не вокруг точного центра спрйта,
         # а вокруг некоторой точки между мышкой и спрайтом:
         sin = math.sin(angle)
         cos = math.cos(angle)
         self.rect.center = (
-            player.rect.x + 10 + (10 * -cos),
-            player.rect.y + 40 + (10 * -sin)
+            player.rect.x + 20 + (10 * -cos),
+            player.rect.y + 30 + (10 * -sin)
         )
 
-    def _get_angle_to_mouse(self, first_point):
+    def follow_enemy(self, enemy, player):
+        angle = self._get_angle_to(self.rect.center, player.rect.center)
+
+        # Для поворота не вокруг точного центра спрйта,
+        # а вокруг некоторой точки между мышкой и спрайтом:
+        sin = math.sin(angle)
+        cos = math.cos(angle)
+        self.rect.center = (
+            enemy.rect.x + 20 + (10 * -cos),
+            enemy.rect.y + 30 + (10 * -sin)
+        )
+
+    def _get_angle_to(self, first_point, second_point):
         '''Получает угол между двумя точками'''
         first_point = first_point
-        second_point = pygame.mouse.get_pos()
+        second_point = second_point
 
         dx = second_point[0] - first_point[0]  # Разница по оси X
         # Разница по оси Y с учетом высоты спрайта для более корректного отображения
@@ -170,11 +251,11 @@ class BasicItem(pygame.sprite.Sprite):
         self.image_angle = angle
         return angle
 
-    def rotate(self):
+    def rotate(self, pos):
         """Поворачивает изображение спрайта на заданный угол и отзеркаливает 
         при необходимости, чтобы спрайт правильно следил за мышью."""
-        mouse_pos = pygame.mouse.get_pos()
-        angle = self._get_angle_to_mouse(self.rect.center)
+        mouse_pos = pos
+        angle = self._get_angle_to(self.rect.center, pos)
         angle_degrees = math.degrees(-angle)  # Переводим в градусы
         if mouse_pos[0] < self.rect.centerx:  # Мышь слева от спрайта
             angle_degrees = -angle_degrees + 180
@@ -211,9 +292,12 @@ class BasicItem(pygame.sprite.Sprite):
 
     def update(self, **kwargs):
         player = kwargs['player']
-        if self == player.active_slot:
-            self.set_displaying(True, self.displaying_layer)
-            self.rotate()
+        if self.owner == player:
+            if self == player.active_slot:
+                self.set_displaying(True, self.displaying_layer)
+                self.rotate(pygame.mouse.get_pos())
+        else:
+            print("WARNING!!! Line 299 in items_sprites!")
 
 
 class Gun(BasicItem):
@@ -280,14 +364,24 @@ class Gun(BasicItem):
 
     def update(self, **kwargs):
         player = kwargs['player']
-        if self == player.active_slot:
-            self.set_displaying(True, self.displaying_layer)
-            self.rotate()
-        if self._get_flag("is_gun_shooting_now"):
-            activate_with_temp_forbid(id=CUSTOM_EVENTS_IDS["shoot_event"],
-                                      delay=self.fire_rate,
-                                      function=self.try_shoot,
-                                      target_pos=pygame.mouse.get_pos())
+        if self.owner == player:
+            if self == player.active_slot:
+                self.set_displaying(True, self.displaying_layer)
+                self.rotate(pygame.mouse.get_pos())
+            if self._get_flag("is_gun_shooting_now"):
+                activate_with_temp_forbid(id=CUSTOM_EVENTS_IDS["shoot_event"],
+                                          delay=self.fire_rate,
+                                          function=self.try_shoot,
+                                          target_pos=pygame.mouse.get_pos())
+        else:
+            if self.owner.hp <= 0:
+                self.kill()
+            self.rotate(player.rect.center)
+            timenow = time.time()
+            if timenow - self.timer >= self.fire_rate / 300.0:
+                target_pos = player.rect.center  # Координаты центра спрайта игрока
+                self.shoot(target_pos)
+                self.timer = timenow + random.random()
 
 
 class Pistol(Gun):
@@ -295,15 +389,11 @@ class Pistol(Gun):
         super().__init__(game_groups_dict, initial_groups)
 
         self.name = "Pistol"
-        self.ammo = 500
+        self.ammo = 20
         self.shots_left = self.ammo
-        self.fire_rate = 100
+        self.fire_rate = 300
 
-        self.image = cut_image(IMG_WEAPONS, (0, 118), (12, 10))
-        width, height = self.image.get_size()
-        self.image_scale = 3
-        self.image = pygame.transform.scale(
-            self.image, (width * self.image_scale, height * self.image_scale))
+        self.image = cut_image(IMG_WEAPONS, (0, 118), (12, 10), scale=3)
         self.original_image = self.image.copy()
 
 

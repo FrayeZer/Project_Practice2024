@@ -138,8 +138,10 @@ def add_SELF_to_groups(object, game_groups_dict, including_groups, layer=10):
 
 # ======================================================== IMAGES
 
-def cut_image(image: pygame.image, pos: tuple, size: tuple):
+def cut_image(image: pygame.image, pos: tuple, size: tuple, scale=1):
     new_image = image.subsurface(pygame.Rect(*pos, *size))
+    new_image = pygame.transform.scale(
+        new_image, (new_image.get_width() * scale, new_image.get_height() * scale))
     return new_image
 
 

@@ -4,6 +4,7 @@ import game_constants as gc
 import random
 import math
 import time
+import custom_sprites.items_sprites as items_sprites
 
 from custom_funcs import add_SELF_to_groups
 
@@ -49,7 +50,8 @@ class HpBar(pygame.sprite.Sprite):
 
 
 class BasicEnemy(pygame.sprite.Sprite):
-    def __init__(self, game_groups_dict: dict, initial_groups: list, start_pos=[100, 100]):
+    def __init__(self, game, game_groups_dict: dict, initial_groups: list, start_pos=[100, 100]):
+        self.game = game
         super().__init__()
         self.game_groups_dict = game_groups_dict
         self.initial_groups_names = initial_groups
@@ -69,6 +71,7 @@ class BasicEnemy(pygame.sprite.Sprite):
         self.hp_multiplier = 1
         self.hp = self.max_hp * self.hp_multiplier
         self.hp_bar = HpBar(game_groups_dict=self.game_groups_dict, owner=self)
+        self.damage_multiplier = 1
 
         self._status = {
             "moving": True,
@@ -83,6 +86,30 @@ class BasicEnemy(pygame.sprite.Sprite):
             "random_movement_timer": 0,
             "random_movement_duration": 0
         }
+
+        self._flags = {
+            "can_restore_stamina_by_time": True,
+            "can_shoot": True,
+            "can_move": True,
+            "can_move_up": True,
+            "can_move_down": True,
+            "can_move_left": True,
+            "can_move_right": True,
+        }
+
+        gun = items_sprites.Pistol(game_groups_dict=self.game_groups_dict,
+                                   initial_groups=["displaying_objects_group", "all_sprites_group"])
+        gun.set_owner(self)
+        self.gun = gun
+
+    def _change_flag(self, flag: str, bool_value):
+        '''Меняет флаг в словаре _flags.
+           Устанавливает флаг в указанное значение'''
+        self._flags[flag] = bool_value
+
+    def _get_flag(self, flag_name):
+        '''Возвращает текущее значение флага по имени из словаря _flags.'''
+        return self._flags[flag_name]
 
     def _is_object_displaying(self):
         return self in self.game_groups_dict["displaying_objects_group"]
@@ -133,6 +160,7 @@ class BasicEnemy(pygame.sprite.Sprite):
         player = kwargs['player']
         self.update_hp()
         self.follow_player(player)
+        self.gun.follow_enemy(self, player)
 
 # =============================================================== FAKE AI
 
@@ -155,7 +183,7 @@ class BasicEnemy(pygame.sprite.Sprite):
         distance = math.sqrt(diff_x**2 + diff_y**2)
 
         # --- Убегание ---
-        if distance < 50 and not self._status["escaping"]:
+        if distance < 150 and not self._status["escaping"]:
             self._status["escaping"] = True
             self.timers["escape_duration"] = random.uniform(0.5, 1.2)
             self.timers["escape_timer"] = current_time
@@ -223,17 +251,45 @@ class BasicEnemy(pygame.sprite.Sprite):
 
         # Вычисляем движение
         move_x = norm_x * move_speed / gc.FPS_LIMIT
+        if norm_x > 0 and not self._flags["can_move_right"] or norm_x < 0 and not self._flags["can_move_left"]:
+            move_x = 0
+
         move_y = norm_y * move_speed / gc.FPS_LIMIT
+        if norm_y > 0 and not self._flags["can_move_down"] or norm_y < 0 and not self._flags["can_move_up"]:
+            move_y = 0
 
         # Обновляем позицию монстра
         self.rect.x += move_x
         self.rect.y += move_y
 
+    def check_collisions(self):
+        self._change_flag("can_move_up",    True)
+        self._change_flag("can_move_down",  True)
+        self._change_flag("can_move_left",  True)
+        self._change_flag("can_move_right", True)
+        collisions = pygame.sprite.spritecollide(
+            self,
+            self.game_groups_dict["barriers_group"],
+            dokill=False)
+        if collisions:
+            for barrier in collisions:
+                barrier.process(self)
+                if barrier.colliding_top():
+                    self._change_flag("can_move_down",  False)
+                elif barrier.colliding_left():
+                    self._change_flag("can_move_right", False)
+                elif barrier.colliding_bottom():
+                    self._change_flag("can_move_up",    False)
+                else:
+                    self._change_flag("can_move_left",  False)
+
 
 class Skeleton(BasicEnemy):
-    def __init__(self, game_groups_dict: dict, initial_groups: list, start_pos=[100, 100]):
-        super().__init__(game_groups_dict=game_groups_dict,
+    def __init__(self, game, game_groups_dict: dict, initial_groups: list, start_pos=[100, 100]):
+        self.game = game
+        super().__init__(game, game_groups_dict=game_groups_dict,
                          initial_groups=initial_groups, start_pos=start_pos)
 
     def update(self, **kwargs):
+        self.check_collisions()
         return super().update(**kwargs)

@@ -2,16 +2,18 @@ import pygame
 import game_constants as gc
 import custom_sprites.items_sprites as items_sprites
 import custom_funcs as cf
+import custom_sprites.ui_sprites as ui_sprites
 from custom_funcs import key_pressed, any_key_pressed, add_SELF_to_groups
 
 
 class Player(pygame.sprite.Sprite):
     '''Основной класс игрока'''
 
-    def __init__(self, game_groups_dict: dict, initial_groups: list):
+    def __init__(self, game_groups_dict: dict, initial_groups: list, game):
         '''game_groups_dict - словарь всех групп игры
            initial_groups - начальные группы, в которые игрок будет добавлен'''
         super().__init__()
+        self.game = game
         self.game_groups_dict = game_groups_dict
         self.initial_groups_names = initial_groups
         self.displaying_layer = 10
@@ -31,7 +33,7 @@ class Player(pygame.sprite.Sprite):
         self.hp = self.max_hp * self.hp_multiplier
         # Скорость движения игрока в пикселах в секунду
         self.movement_speed = 200 * self.speed_multiplier
-        self.damage_multiplier = 1  # Множитель наносимого урона
+        self.damage_multiplier = 10  # Множитель наносимого урона
 
         # Инициализация инвентаря игрока (дублируется несколько предметов)
         basic_item = items_sprites.BasicItem(game_groups_dict=self.game_groups_dict,
@@ -39,12 +41,13 @@ class Player(pygame.sprite.Sprite):
                                                              "player_kit_group"])
         basic_item.set_owner(self)
 
-        self.inventory = [basic_item.deepcopy() for _ in range(4)]
+        self.inventory = ui_sprites.Inventory(game=self.game, game_groups_dict=self.game_groups_dict,
+                                              initial_items=[basic_item.deepcopy() for _ in range(4)])
         self.equipment = [basic_item.deepcopy()
                           for _ in range(2)]  # Для шлема и ботинок
 
         self.active_slot_index = 0
-        self.active_slot = self.inventory[self.active_slot_index]
+        self.active_slot = self.inventory.items[self.active_slot_index]
 
         # Список предметов, которые игрок может получить
         # только объекты из следующего списка классов можно (не принудительно) получить в инвентарь
@@ -57,6 +60,10 @@ class Player(pygame.sprite.Sprite):
             "can_restore_stamina_by_time": True,
             "can_shoot": True,
             "can_move": True,
+            "can_move_up": True,
+            "can_move_down": True,
+            "can_move_left": True,
+            "can_move_right": True,
         }
         self._status = {
             "moving": False,
@@ -74,6 +81,9 @@ class Player(pygame.sprite.Sprite):
         self.TEST_VALUE = 0
 
 # =============================================================== FLAGS
+
+    def _is_object_displaying(self) -> bool:
+        return self in self.game_groups_dict["displaying_objects_group"]
 
     def _change_flag(self, flag: str, bool_value):
         '''Меняет флаг в словаре _flags.
@@ -191,7 +201,7 @@ class Player(pygame.sprite.Sprite):
     def _inventory_free_space(self):
         '''Возвращает количество свободных слотов в инвентаре (где есть предметы типа BasicItem).'''
         count = 0
-        for item in self.inventory:
+        for item in self.inventory.items:
             if item.__class__ == items_sprites.BasicItem:
                 count += 1
         return count
@@ -213,29 +223,30 @@ class Player(pygame.sprite.Sprite):
     def add_to_inventory(self, item):
         '''Добавляет предмет в инвентарь в первый свободный слот (где есть объект класса BasicItem).'''
         if self._can_take_item(item):
-            for i, cell in enumerate(self.inventory):
+            for i, cell in enumerate(self.inventory.items):
                 if cell.__class__ == items_sprites.BasicItem:
                     cell.kill()
-                    self.inventory[i] = item
-                    self.inventory[i].player_takes_item(player=self)
+                    self.inventory.items[i] = item
+                    self.inventory.items[i].player_takes_item(player=self)
                     break
 
     def replace_inventory_cell(self, index: int, item):
         '''Принудительно заменяет конкретный элемент инвентаря на новый, убивая старый.'''
         if not isinstance(item, items_sprites.BasicItem):
             cf.INTERRUPT_ERROR(2)
-        self.inventory[index].kill()
-        self.inventory[index] = item.deepcopy()
+        self.inventory.items[index].kill()
+        self.inventory.items[index] = item.deepcopy()
 
     def change_active_slot(self, new_active_slot_index):
         '''Изменяет активный слот инвентаря на новый. Отключает рендеринг старого активного 
         предмета и включает рендеринг нового.'''
-        if not self.active_slot == self.inventory[new_active_slot_index]:
+        if not self.active_slot == self.inventory.items[new_active_slot_index]:
             self.active_slot_index = new_active_slot_index
             self.active_slot.set_displaying(False)
-            self.active_slot = self.inventory[self.active_slot_index]
+            self.active_slot = self.inventory.items[self.active_slot_index]
             self.active_slot.set_displaying(True,
                                             self.active_slot.displaying_layer)
+            self.inventory.update()
 
 
 # =============================================================== MENUS
@@ -247,10 +258,10 @@ class Player(pygame.sprite.Sprite):
         for obj in interactive_collisions:
             if obj._is_object_displaying():
                 if obj.name == "Door":
-                    obj.open(player=self)
+                    obj.open(player=self, game=self.game)
                     self._change_flag("can_move", False)
                 elif self._is_menu_opened(obj.name) == False:
-                    obj.open(player=self)
+                    obj.open(player=self, game=self.game)
                     self._set_menu_opened(obj.name, True)
                     self._change_flag("can_move", False)
 
@@ -258,7 +269,8 @@ class Player(pygame.sprite.Sprite):
         interactive_collisions = pygame.sprite.spritecollide(
             self, self.game_groups_dict["interactive_objects_group"], dokill=0)
         for obj in interactive_collisions:
-            if self._is_menu_opened(obj.name) == True:
+            if not "Door" in obj.name and \
+                    self._is_menu_opened(obj.name) == True:
                 obj.close(player=self)
                 self._set_menu_opened(obj.name, False)
                 self._change_flag("can_move", True)
@@ -273,13 +285,14 @@ class Player(pygame.sprite.Sprite):
     def update_hp(self):
         if self.hp < 1:
             print("YOU DEAD")
+            self.game.window = "lose_screen"
 
     def process_mouse(self, button_id: int, pressed_unpressed: bool):
         if button_id == 1:  # ЛКМ
             self.active_slot.left_mouse_click_action(pressed_unpressed)
-        elif button_id == 2:  # ПКМ
-            pass
-        elif button_id == 3:  # СКМ
+        elif button_id == 2:  # СКМ
+            print(pygame.mouse.get_pos())
+        elif button_id == 3:  # ПКМ
             pass
 
     def process_keystrokes(self, K_P: list):
@@ -328,13 +341,17 @@ class Player(pygame.sprite.Sprite):
         move_y = 0
 
         if key_pressed(K_P, "A"):
-            move_x = -self.movement_speed
+            if self._get_flag("can_move_left"):
+                move_x = -self.movement_speed
         if key_pressed(K_P, "D"):
-            move_x = self.movement_speed
+            if self._get_flag("can_move_right"):
+                move_x = self.movement_speed
         if key_pressed(K_P, "W"):
-            move_y = -self.movement_speed
+            if self._get_flag("can_move_up"):
+                move_y = -self.movement_speed
         if key_pressed(K_P, "S"):
-            move_y = self.movement_speed
+            if self._get_flag("can_move_down"):
+                move_y = self.movement_speed
 
         if self.get_stamina() >= 4:
             if key_pressed(K_P, "L_SHIFT") and any_key_pressed(K_P, "W", "S", "A", "D"):
@@ -351,12 +368,34 @@ class Player(pygame.sprite.Sprite):
             self.rect.x += move_x / gc.FPS_LIMIT
             self.rect.y += move_y / gc.FPS_LIMIT
 
+    def check_collisions(self):
+        self._change_flag("can_move_up",    True)
+        self._change_flag("can_move_down",  True)
+        self._change_flag("can_move_left",  True)
+        self._change_flag("can_move_right", True)
+        collisions = pygame.sprite.spritecollide(
+            self,
+            self.game_groups_dict["barriers_group"],
+            dokill=False)
+        if collisions:
+            for barrier in collisions:
+                barrier.process(self)
+                if barrier.colliding_top():
+                    self._change_flag("can_move_down",  False)
+                elif barrier.colliding_left():
+                    self._change_flag("can_move_right", False)
+                elif barrier.colliding_bottom():
+                    self._change_flag("can_move_up",    False)
+                else:
+                    self._change_flag("can_move_left",  False)
+
     def update(self, **kwargs):
         '''Обновляет состояние игрока каждый кадр'''
         K_P = kwargs["keys_pressed"]
         self.update_stamina()
         self.update_hp()
         self.process_keystrokes(K_P)
+        self.check_collisions()
         self.update_position(K_P)
 
         self.change_active_slot(self.active_slot_index)
@@ -377,6 +416,6 @@ class Player(pygame.sprite.Sprite):
         #     print(self._get_flag("can_restore_stamina_by_time"))
         #     print()
 
-        # for i in self.inventory:
+        # for i in self.inventory.items:
         #     print(i.name, end=', ')
         # print()

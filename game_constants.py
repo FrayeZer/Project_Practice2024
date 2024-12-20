@@ -6,7 +6,7 @@ SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 600
 
 # Ограничение фпс
-FPS_LIMIT = 50
+FPS_LIMIT = 60
 
 # Словарь кастомных ивентов
 CUSTOM_EVENTS_IDS = {

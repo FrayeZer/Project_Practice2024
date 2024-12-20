@@ -1,6 +1,8 @@
 # ./main.py
 import pygame
 import sys
+
+import pygame.image
 import game_constants as gc
 import custom_funcs as cf
 
@@ -11,10 +13,15 @@ import custom_sprites.ui_sprites as ui_sprites
 
 from ingame_processes import GameProcess, Level
 
+IMG_MAIN_MENU = pygame.image.load("textures/main_menu_screen.png")
+IMG_UI = pygame.image.load("textures/UI.png")
+
 
 class Game:
     def __init__(self):
         pygame.init()
+        # game, main_menu, pause_menu, lose_screen
+        self.window = "main_menu"
 
         # Внутригровые процессы
         self.unit_types = {"Skeleton": enemy_sprites.Skeleton,
@@ -44,8 +51,11 @@ class Game:
         self.units_group = pygame.sprite.Group()
         self.interactive_objects_group = pygame.sprite.Group()
         self.menus_group = pygame.sprite.Group()
+        self.barriers_group = pygame.sprite.Group()
+        self.player_group = pygame.sprite.Group()
 
         self.game_groups_dict = {
+            "player_group": self.player_group,
             "all_sprites_group": self.all_sprites_group,
             "item_sprites_group": self.item_sprites_group,
             "player_kit_group": self.player_kit_group,
@@ -56,11 +66,14 @@ class Game:
             "interactive_objects_group": self.interactive_objects_group,
             "menus_group": self.menus_group,
             "any_level_group": self.level.any_level_group,
+            "barriers_group": self.barriers_group,
         }
 
         # Инициализация ключевых спрайтов или групп спрайтов
         self.__init_fonts()
         self.__init_player()
+        self.__init_walls()
+        self.__init_ui()
         # self.__add_guns_into_the_map()
         # self.__init_enemy()
         # self.__init_interactive_objects()
@@ -92,41 +105,62 @@ class Game:
     #     self.screen.blit()
 
     def __init_fonts(self):
-        self.fps_label = pygame.font.SysFont("Times New Roman", 24)
+        self.fps_label = pygame.font.SysFont("Monocraft", 12)
+        self.ammo_label = pygame.font.SysFont("Monocraft", 24)
 
     def __init_player(self):
         self.player = player_sprite.Player(game_groups_dict=self.game_groups_dict,
-                                           initial_groups=["displaying_objects_group",
+                                           initial_groups=["player_group",
+                                                           "displaying_objects_group",
                                                            "all_sprites_group",
                                                            "map_kit_group",
                                                            "player_kit_group",
-                                                           "units_group",])
+                                                           "units_group",],
+                                           game=self)
         self.player.rect.center = (self.screen_width // 2,
                                    self.screen_height // 2)
-        # ...
 
-    def __init_enemy(self):
-        # self.skeleton = enemy_sprites.Skeleton(game_groups_dict=self.game_groups_dict,
-        #    initial_groups=["displaying_objects_group",
-        #                    "all_sprites_group",
-        #                    "map_kit_group",
-        #                    "units_group",
-        #                    "zero_level_group"])
-        pass
+    def __init_walls(self):
+        self.top_wall = items_sprites.Barrier(game_groups_dict=self.game_groups_dict,
+                                              size=(820, 20), pos=(40, 75))
+        self.left_wall = items_sprites.Barrier(game_groups_dict=self.game_groups_dict,
+                                               size=(20, 420), pos=(25, 85))
+        self.bottom_wall = items_sprites.Barrier(game_groups_dict=self.game_groups_dict,
+                                                 size=(820, 20), pos=(40, 505))
+        self.right_wall = items_sprites.Barrier(game_groups_dict=self.game_groups_dict,
+                                                size=(20, 420), pos=(860, 85))
 
-    def __add_guns_into_the_map(self):
-        self.pistol = items_sprites.Pistol(game_groups_dict=self.game_groups_dict,
-                                           initial_groups=["displaying_objects_group",
-                                                           "all_sprites_group",
-                                                           "map_kit_group",
-                                                           "item_sprites_group",
-                                                           "any_level_group"])
-        self.pistol.set_owner(self.player)
-        self.pistol.rect.center = (
-            self.screen_width // 2, self.screen_height // 2)
+    def __init_ui(self):
+
+        self.wooden_bg_bar = ui_sprites.WoodenBgBar(game=self,
+                                                    game_groups_dict=self.game_groups_dict,
+                                                    initial_groups=["displaying_objects_group",
+                                                                    "all_sprites_group",
+                                                                    "menus_group"],
+                                                    start_pos=[])
+
+        self.pause_button = ui_sprites.PauseButton(game=self,
+                                                    game_groups_dict=self.game_groups_dict,
+                                                    initial_groups=["displaying_objects_group",
+                                                                    "all_sprites_group",
+                                                                    "menus_group"],
+                                                    start_pos=[])
+        self.player_hp_bar_bg = ui_sprites.PlayerHpBarBg(game=self,
+                                                    game_groups_dict=self.game_groups_dict,
+                                                    initial_groups=["displaying_objects_group",
+                                                                    "all_sprites_group",
+                                                                    "menus_group"],
+                                                    start_pos=[])
+        self.player_hp_bar = ui_sprites.PlayerHpBar(game=self,
+                                                    game_groups_dict=self.game_groups_dict,
+                                                    initial_groups=["displaying_objects_group",
+                                                                    "all_sprites_group",
+                                                                    "menus_group"],
+                                                    start_pos=[])
 
 
 # ========================================================== GAME
+
 
     def get_next_level_id(self):
         return self.level.id + self.levels_completed
@@ -143,6 +177,7 @@ class Game:
 
 # ========================================================== UPDATE
 
+
     def draw_fps(self):
         fps_text = self.fps_label.render(
             f"FPS: {int(self.clock.get_fps())}", True, (255, 255, 255))
@@ -153,12 +188,12 @@ class Game:
         if isinstance(player_active_item, items_sprites.Gun):
             if player_active_item._get_flag("is_reloading_now") == False:
                 text = f"{
-                    player_active_item.shots_left} / {player_active_item.ammo}"
+                    player_active_item.shots_left}/{player_active_item.ammo}"
             else:
                 text = "Reloading"
-            ammo_text = self.fps_label.render(text, True, (255, 255, 255))
+            ammo_text = self.ammo_label.render(text, True, (255, 255, 255))
             self.screen.blit(
-                ammo_text, (self.screen_width - (len(text) * 15), self.screen_height - 50))
+                ammo_text, (self.screen_width - (len(text) * 20), self.screen_height - 50))
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -178,14 +213,9 @@ class Game:
                     cf.get_delayed_event(event_id)[0](**kwargs)
                     cf.remove_delayed_event(event_id)
 
-                if event_id == gc.CUSTOM_EVENTS_IDS["level_started_event"]:
-                    self.change_level(self.get_next_level_id())
-                    print(f"level {self.level.id} started")
-
-                if event_id == gc.CUSTOM_EVENTS_IDS["level_ended_event"]:
-                    self.change_level(0)
-                    self.levels_completed += 1
-                    print("returning back to safe zone")
+                # if event_id == gc.CUSTOM_EVENTS_IDS["level_started_event"]:
+                #     self.change_level(self.get_next_level_id())
+                #     print(f"level {self.level.id} started")
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.player.process_mouse(
@@ -194,34 +224,47 @@ class Game:
                 self.player.process_mouse(
                     button_id=event.button, pressed_unpressed=False)
 
-    def update(self):
+    def update(self) -> None:
         self.all_sprites_group.update(
             keys_pressed=pygame.key.get_pressed(),
-            player=self.player)
+            player=self.player,
+            game=self)
         self.level.update()
 
-        # for l in self.game_groups_dict["displaying_objects_group"].layers():
-        #     f = self.game_groups_dict["displaying_objects_group"].get_sprites_from_layer(l)
-        #     for s in f:
-        #         try:
-        #             print(s.name, end= ' ')
-        #         except Exception:
-        #             pass
-        #         print(s, l)
-
-    def render(self):
+    def render(self) -> None:
         self.screen.fill((0, 0, 0))
         self.displaying_objects_group.draw(self.screen)
-        self.draw_fps()
-        self.draw_ammo_count()
+        # self.draw_fps()
+        self.draw_menu(self.window)
         pygame.display.flip()
         self.clock.tick(self.fps_limit)
 
+    def draw_menu(self, window) -> None:
+        if window == "game":
+            self.draw_ammo_count()
+        if window == "main_menu":
+            self.screen.blit(IMG_MAIN_MENU, (0, 0))
+        if window == "lose_screen":
+            pass
+
+    def process_menu(self):
+        if self.window == "main_menu":
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.window = "game"
+        elif self.window == "game":
+            pass
+
     def run(self):
         while True:
-            self.handle_events()
-            self.update()
+            if self.window == "game":
+                self.update()
+                self.handle_events()
             self.render()
+            self.process_menu()
 
 
 if __name__ == "__main__":

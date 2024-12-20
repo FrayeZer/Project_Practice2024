@@ -1,4 +1,5 @@
 import pygame
+import pygame.locals
 import game_constants as gc
 import custom_funcs as cf
 
@@ -14,9 +15,10 @@ class GameProcess():
         self.game.level.update_json()
         self.game.level.add_level_sprites()
         if level_id != 0:
-            self.teleport_player((400, 400))
+            self.teleport_player((430, 400))
         else:
-            self.teleport_player((400, 100))
+            self.teleport_player((430, 130))
+        self.game.level.add_map_image()
 
     def teleport_player(self, pos):
         self.game.player.rect.x = pos[0]
@@ -36,6 +38,22 @@ class Level():
         self.json = None
         self.is_level_ended = False
 
+    def add_map_image(self):
+        self.map_image_sprite = pygame.sprite.Sprite()
+        self.map_image_sprite.image = pygame.image.load(
+            f"levels/level{self.id}/map_image.png")
+        self.map_image_sprite.rect = self.map_image_sprite.image.get_rect()
+        self.map_image_sprite.rect.x = 0
+        self.map_image_sprite.rect.y = 0
+        groups = ["all_sprites_group",
+                  "map_kit_group",
+                  "displaying_objects_group",
+                  "any_level_group"]
+        cf.add_SELF_to_groups(object=self.map_image_sprite,
+                              game_groups_dict=self.game.game_groups_dict,
+                              including_groups=groups,
+                              layer=0)
+
     def kill_current_level_sprites(self):
         for sprite in self.any_level_group:
             sprite.kill()
@@ -49,7 +67,7 @@ class Level():
                           "units_group",
                           "any_level_group"]
 
-        self.initialised_sprites = [self.game.unit_types[unit](game_groups_dict=self.game.game_groups_dict, initial_groups=initial_groups, start_pos=start_pos)
+        self.initialised_sprites = [self.game.unit_types[unit](game=self.game, game_groups_dict=self.game.game_groups_dict, initial_groups=initial_groups, start_pos=start_pos)
                                     for unit in self.json[f"wave_{self.wave}"]["units"] for start_pos in self.json[f"wave_{self.wave}"]["units"][unit]]
         self.enemies = [sprite for sprite in self.initialised_sprites if sprite
                         not in self.game.game_groups_dict["interactive_objects_group"]]
@@ -75,14 +93,19 @@ class Level():
                 self.end()
 
     def end(self):
+        print(123)
         self.is_level_ended = True
-        self.game.unit_types["ExitDoor"](game_groups_dict=self.game.game_groups_dict,
+        self.game.unit_types["ExitDoor"](game=self.game,
+                                         game_groups_dict=self.game.game_groups_dict,
                                          initial_groups=None, start_pos=None)
+
+    def set_level_ended(self, bool_value: bool):
+        if self.is_level_ended != bool_value:
+            self.is_level_ended = bool_value
 
     def update(self):
         self.count_enemies()
         if self.enemy_left < 1:
             if self.id != 0:
                 self.next_wave()
-        if self.is_level_ended == True:
-            self.is_level_ended = False
+        # self.set_level_ended(False)
